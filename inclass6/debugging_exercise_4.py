@@ -9,7 +9,8 @@ def get_doubles_then_triples(L):
     """ Returns a new list containing the original list with each element
     	multiplied by 2 concatenated with the original list with each element
 	multiplied by 3 """
-    return get_multiple_of_list(L,2) + get_multiple_of_list(L,3)
+    copy = list(L)
+    return get_multiple_of_list(L,2) + get_multiple_of_list(copy,3)
 
 def get_multiple_of_list(L,n):
     for i in range(len(L)):
