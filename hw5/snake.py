@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 10 14:38:51 2014
+Game of snake
 
-@author: cyprien
+@author: Cyprien, Leo, Harsh
 """
 
+#Import
 import pygame
 from pygame.locals import *
 import time
 from random import randrange
 
+#DIRECTION OF THE SNAKE
 UP = 0
 DOWN = 1
 LEFT = 2
@@ -18,164 +20,200 @@ RIGHT = 3
 class SnakeModel:
     """ Encodes the game state """
     def __init__(self):
-        self.clock = pygame.time.Clock()
+        """ Init the game """
         self.snake = Snake()
         self.score = 0
         self.eatBlocks = []
-
-        self.eatBlocks.append(EatBlock((255,0,0), 20, 20))
+        self.eatBlocks.append(EatBlock())
 
     def move(self):
+      """ Move the snake and handle event like collision """
+      #Move Snake
       self.snake.move()
 
-      #Eating
+      #Detect eating
       for block in self.snake.blocks:
         for eatblock in self.eatBlocks:
           if block.x == eatblock.x and block.y == eatblock.y:
+            #Add block to snake, remove eat block, add a new eat block and update score
             self.eatBlocks.remove(eatblock)
-            self.snake.addBlock((0,0,0), 20, 20)
-            self.eatBlocks.append(EatBlock((255,0,0), 20, 20))
+            self.snake.addBlock()
+            self.eatBlocks.append(EatBlock())
             self.score += 10
 
+        #Detect snake collision
         collision = 0
         for block2 in self.snake.blocks:
           if block.x == block2.x and block.y == block2.y:
             collision += 1
 
+            #The snake is eating itself => Game Over
             if collision == 2:
               self.snake.stop = True
               break
 
     def restart(self):
+      """ Restart a game """
       self.score = 0
-
       self.snake.blocks = []
-      self.snake.direction = 0
+      self.snake.direction = UP
       self.snake.stop = False
 
       for i in range(4):
-          self.snake.addBlock((0,0,0), 20, 20)
+          self.snake.addBlock()
 
-
-class EatBlock:
-    def __init__(self,color,height,width):
-        self.color = color
-        self.height = height
-        self.width = width
-        self.x = randrange(32)*20
-        self.y = randrange(3,24)*20
-
-class SnakeBlock:
-    def __init__(self,color,height,width,x,y):
-        self.color = color
-        self.height = height
-        self.width = width
+class Block(object):
+    """ Represent a block of the Snake """
+    def __init__(self,x,y):
         self.x = x
         self.y = y
-        self.moveList = [0]
-        self.indexMove = 0
+
+class EatBlock(Block):
+    """ Represent a block that the snake need to eat """
+    def __init__(self):
+        Block.__init__(self,randrange(32)*20,randrange(3,24)*20)
 
 class Snake:
+    """ Represent the snake """
     def __init__(self):
+        """ Init snake state """
         self.blocks = []
-        self.direction = 0
+        self.direction = UP
         self.stop = False
 
+        #Add some blocks
         for i in range(4):
-            self.addBlock((0,0,0), 20, 20)
+            self.addBlock()
 
-    def addBlock(self, color,height,width):
-        x = y = 200
+    def addBlock(self):
+        """ Add a block to the snake """
+        x = y = 200 #Default position
 
+        #If it is not the first block
         if len(self.blocks) > 0:
+            #Set the position relatively to the last block
             direction = self.direction
             block = self.blocks[-1]
 
-            if direction == 0:
+            if direction == UP:
                 x = block.x
                 y = block.y - 20
-            if direction == 1:
+            if direction == DOWN:
                 x = block.x
                 y = block.y + 20
-            if direction == 2:
+            if direction == LEFT:
                 x = block.x - 20
                 y = block.y
-            if direction == 3:
+            if direction == RIGHT:
                 x = block.x + 20
                 y = block.y
 
-            #Overflow
+            #Screen Overflow
             if x < 0:
-              x = 640
-            if x > 640:
+              x = 620
+            if x > 620:
               x = 0
             if y < 60:
-              y = 480
-            if y > 480:
+              y = 460
+            if y > 460:
               y = 60
 
-        self.blocks.append(SnakeBlock(color, height, width, x, y))
+        #Add block
+        self.blocks.append(Block(x, y))
 
     def move(self):
+        """ Move the snake """
         if self.stop == False:
-          self.addBlock((0,0,0), 20, 20)
-          self.blocks.pop(0)
+          self.addBlock() #Add block at the head
+          self.blocks.pop(0)  #Remove block at the tail
 
 
 class PyGameWindowView:
+    """ View of the game: print everything on the screen """
     def __init__(self,model,screen):
+        """ Init the view """
         self.model = model
         self.screen = screen
+
+        """ Load image of the snake """
         self.background = pygame.image.load("background.jpg").convert()
+        self.block = pygame.image.load("block.png").convert_alpha()
+        self.head = pygame.image.load("head.png").convert_alpha()
 
     def draw(self):
+        """ Draw everything on screen """
+        #Print the background
         screen.blit(self.background, (0,0))
-        for blocks in self.model.snake.blocks:
-                pygame.draw.rect(self.screen, pygame.Color(blocks.color[0],blocks.color[1],blocks.color[2]),pygame.Rect(blocks.x,blocks.y,blocks.width,blocks.height))
 
-        for eatblocks in self.model.eatBlocks:
-            pygame.draw.rect(self.screen, pygame.Color(eatblocks.color[0],eatblocks.color[1],eatblocks.color[2]),pygame.Rect(eatblocks.x,eatblocks.y,eatblocks.width,eatblocks.height))
+        #Print the snake
+        i=len(self.model.snake.blocks) -1
+        for block in self.model.snake.blocks:
+            if i == 0: #It is the head
+              screen.blit(self.head, (block.x,block.y))
+            else:
+              screen.blit(self.block, (block.x,block.y))
 
+            i -= 1
+
+        #Print eat block
+        for eatblock in self.model.eatBlocks:
+            screen.blit(self.block, (eatblock.x,eatblock.y))
+
+        #Draw score panel
         pygame.draw.rect(screen, (0,0,0), (0,0,640,60), 0)
-
-
-        myfont = pygame.font.SysFont("monospace", 40)
-        label = myfont.render("Score:"+str(self.model.score), 1, (255,255,0))
-        screen.blit(label, (200, 5))
+        if self.model.snake.stop == True: #Game over
+          myfont = pygame.font.SysFont("monospace", 20)
+          label = myfont.render("Game over, press enter to restart. (Score:"+str(self.model.score)+")", 1, (255,255,255))
+          screen.blit(label, (10, 15))
+        else:
+          myfont = pygame.font.SysFont("monospace", 40)
+          label = myfont.render("Score:"+str(self.model.score), 1, (255,255,255))
+          screen.blit(label, (200, 5))
 
         pygame.display.update()
 
 class PyGameKeyboardController:
+    """ Handle keyboard input """
     def __init__(self,model):
+        """ Init controller """
         self.model = model
 
     def handle_key_event(self,event):
-        direction = 0
-        if event.key == K_LEFT:
-            direction = LEFT
-        if event.key == K_UP:
-            direction = UP
-        if event.key == K_RIGHT:
-            direction = RIGHT
-        if event.key == K_DOWN:
-            direction = DOWN
-        if event.key == K_RETURN and self.model.snake.stop == True:
-          self.model.restart()
+        """ Handle keyboard event
 
-        self.model.snake.direction = direction
+        Keyword arguments:
+        event -- event to handle
+        """
+        #Get arrow key
+        lastDir = self.model.snake.direction
+        if event.key == K_LEFT and lastDir != RIGHT:
+            self.model.snake.direction = LEFT
+        if event.key == K_UP and lastDir != DOWN:
+            self.model.snake.direction = UP
+        if event.key == K_RIGHT and lastDir != LEFT:
+            self.model.snake.direction = RIGHT
+        if event.key == K_DOWN and lastDir != UP:
+            self.model.snake.direction = DOWN
+
+        #Enter to restart if the game is over
+        if event.key == K_RETURN and self.model.snake.stop == True:
+            self.model.restart()
 
 if __name__ == '__main__':
+    #Init pygame
     pygame.init()
-
     size = (640,480)
     screen = pygame.display.set_mode(size)
+    pygame.display.set_caption("Snake")
+    pygame.display.set_icon(pygame.image.load("head.png").convert_alpha())
 
+    #Init MVC
     model = SnakeModel()
     view = PyGameWindowView(model,screen)
     controller = PyGameKeyboardController(model)
 
+    #RUN
     running = True
-
     while running:
         for event in pygame.event.get():
             if event.type == QUIT:
